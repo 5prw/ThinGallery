@@ -276,7 +276,10 @@ function getImageThumbnail(url, finishedCb, thumbCb) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
   xhr.responseType = "arraybuffer";
-  xhr.setRequestHeader('Range', 'bytes=0-60000');
+  if (!url.endsWith('.svgz')) {
+      // This does not work for compressed .svg files
+      xhr.setRequestHeader('Range', 'bytes=0-60000');
+     }
   xhr.onload = function (oEvent) {
     getEXIFThumb(url, xhr.response, function(url, rotation) {
       thumbCb(url, rotation);
@@ -518,7 +521,6 @@ window.onload = function() {
   <div id="maximise" style="visibility:hidden">&#x2798;</div>
 </div>
 
-</div>
 </body>
 
 </html>
