@@ -142,7 +142,8 @@ Usage
 var THUMB_SIZE = 240; // size when we have to load the full image and resize it
 var MAX_CONCURRENT_REQ = 2;
 
-var EXT_IMAGES = [".jpg",".jpeg",".png",".svg",".svgz"];
+var EXT_EXIF_THUMB = [".jpg",".jpeg" ]; // these have EXIF thumbnails
+var EXT_IMAGES = [".jpg",".jpeg",".png",".webp",".svg",".svgz" ];
 var EXT_VIDEO = [".avi",".mov",".mpeg",".mpg",".mp4",".ogv"];
 var EXT_AUDIO = [".mp3",".wav",".ogg"];
 var EXT_TEXT = [".txt",".md"];
@@ -328,20 +329,9 @@ function getNiceName(href) {
   return niceName;
 }
 
-// Add a thumbnail with a 'wait' indicator that fills in when ready
-function addDeferredThumb(thumbs, href) {
-  var niceName = getNiceName(href);
-
-  function thumbLoaded(url, rotate) {
-    imageInfo[href].thumb = url;
-    imageInfo[href].rotation = rotate;
-    im.innerHTML =
-      '<div class="thumbimage" style="background-image:url('+url+');transform:rotate('+rotate+'deg)"></div>'+
-      '<div class="caption">'+decodeURIComponent(niceName)+'</div>';
-  }
-
+// create a thumbnail and add it to the DOM, but don't set any contents
+function addClickableThumb(thumbs, href) {
   var im = document.createElement("DIV");
-  im.innerHTML = '<div class="caption">'+decodeURIComponent(niceName)+'</div><div class="thumbicon">&#8987;</div>';
   im.className = "thumb";
   im.onclick = function(e) {
     e.preventDefault();
@@ -354,6 +344,23 @@ function addDeferredThumb(thumbs, href) {
     }
   };
   im = thumbs.appendChild(im);
+  return im;
+}
+
+// Add a thumbnail with a 'wait' indicator that fills in when ready
+function addDeferredThumb(thumbs, href) {
+  var niceName = getNiceName(href);
+
+  function thumbLoaded(url, rotate) {
+    imageInfo[href].thumb = url;
+    imageInfo[href].rotation = rotate;
+    im.innerHTML =
+      '<div class="thumbimage" style="background-image:url('+url+');transform:rotate('+rotate+'deg)"></div>'+
+      '<div class="caption">'+decodeURIComponent(niceName)+'</div>';
+  }
+
+  var im = addClickableThumb(thumbs, href);
+  im.innerHTML = '<div class="caption">'+decodeURIComponent(niceName)+'</div><div class="thumbicon">&#8987;</div>';
   getImageThumbnailThrottled(href, function(url,rotate) {
     if (url == href) {
       // We use getImageThumbnailThrottled so we can make sure
@@ -363,6 +370,15 @@ function addDeferredThumb(thumbs, href) {
       thumbLoaded(url, rotate);
     }
   });
+}
+
+// Add an image thumbnail - just shows the image directly inside it (for non-JPEGs that don't have a thumbnail)
+function addImageThumb(thumbs, href) {
+  var niceName = getNiceName(href);
+  var im = addClickableThumb(thumbs, href);
+  im.innerHTML =
+      '<div class="thumbimage" style="background-image:url('+href+');transform:rotate(0)"></div>'+
+      '<div class="caption">'+decodeURIComponent(niceName)+'</div>';  
 }
 
 // Add a simple thumbnail where a click opens a new window
@@ -417,12 +433,16 @@ function processIndexPage() {
     var ext = hrefl.match(/\.[^\.]*$/);
     if (!ext) continue;
     ext=ext[0];
-    if (EXT_IMAGES.indexOf(ext)>=0) {
+    if (EXT_EXIF_THUMB.indexOf(ext)>=0) { // if it's jpeg/jpg and we can get a thumbnail
       if (handled.indexOf(href)>=0) continue;
       handled.push(href);
       imageURLs.push(href);
-      imageInfo[href] = { thumb : "" };
+      imageInfo[href] = { thumb : "", rotation : 0 };
       addDeferredThumb(thumbs, href);
+    } else if (EXT_IMAGES.indexOf(ext)>=0) { // else just put the image in as a thumbnail
+      imageURLs.push(href);
+      imageInfo[href] = { thumb : href, rotation : 0 };
+      addImageThumb(thumbs, href);  
     } else if (EXT_VIDEO.indexOf(ext)>=0) {
       addBasicThumb(thumbs, href, "&#x1F3A5;");
     } else if (EXT_AUDIO.indexOf(ext)>=0) {
