@@ -416,10 +416,9 @@ function processIndexPage() {
     var href = elements[i].href;
     var text = elements[i].innerText;
     var parentText = elements[i].parentElement.innerText;
-    var re = new RegExp(text + '\/', "g");
 
     if (handled.indexOf(href)>=0) continue;
-    if ((href[href.length-1]=="/" || parentText.match(re) )&& href!==baseURL) {
+    if ((href[href.length-1]=="/" || parentText.includes(text+'/') )&& href!==baseURL) {
       handled.push(href);
       addFolder(thumbs, href);
     }
